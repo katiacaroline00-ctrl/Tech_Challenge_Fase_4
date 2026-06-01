@@ -1,0 +1,13 @@
+[theme]
+
+base="light"
+
+primaryColor="#43b6cf"
+
+backgroundColor="#ffffff"
+
+secondaryBackgroundColor="#ece7e7"
+
+textColor="#000000"
+
+font="roboto"
