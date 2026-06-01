@@ -16,7 +16,7 @@ Para garantir a reprodutibilidade e a aplicação prática do modelo, foram dese
 
 
 
-Pipeline completo de pré-processamento e treinamento (JPy Notebook)
+Pipeline completo de pré-processamento e treinamento (VScode)
 
 
 
@@ -76,13 +76,13 @@ Apresentar os resultados de forma clara e gerencial.
 
 📊 Dicionário de Dados
 
-O conjunto obesity.csv contém 17 variáveis preditoras e 1 variável alvo (Obesity_level). Abaixo a descrição detalhada de cada campo:
+O conjunto obesity.csv contém 16 variáveis preditoras e 1 variável alvo (Obesity_level). Abaixo a descrição detalhada de cada campo:
 
 | Age | Numérica | Idade em anos | | Weight | Numérica | Peso em quilogramas | | FAVC | Binária | Consumo frequente de alimentos calóricos (yes / no) | | NCP | Numérica | Número de refeições principais por dia | | SMOKE | Binária | Fumante (yes / no) | | SCC | Binária | Monitoramento de calorias consumidas (yes / no) | | TUE | Numérica | Tempo de uso de dispositivos eletrônicos (horas/dia) | | MTRANS | Categórica | Meio de transporte mais utilizado (Automobile, Bike, Motorbike, Public_Transportation, Walking) |
 
 
 
-ℹ️ A variável alvo Obesity_level pode conter de 7 a 11 classes dependendo da versão do dataset original. A presente análise considerou todas as classes presentes.
+ℹ️ A variável alvo Obesity_level considerou todas as classes presentes, excetp altura e peso.
 
 
 
@@ -107,8 +107,8 @@ O conjunto obesity.csv contém 17 variáveis preditoras e 1 variável alvo (Obes
 │   ├── estetoscopio.ico                 # Ícone do Streamlit
 │   ├── stethoscope-medical-tool.png     # Imagem do Streamlit
 │   └── streamlit                        # Arquivo de configuração/execução
-├── Apresentacao.pptx                    # Apresentação gerencial
 └── README.md                            # Este arquivo
+└── requirements.txt                     # bibliotecas utilizadas
 
 
 
@@ -134,16 +134,9 @@ venv\Scripts\activate          # Windows
 pip install -r requirements.txt
 
 
-
-
-Se não houver requirements.txt, instale manualmente os pacotes principais:
-
-pip install pandas numpy matplotlib seaborn scikit-learn xgboost imbalanced-learn streamlit joblib plotly
-
-
 4. Executar o pipeline de treinamento
 
-jupyter notebook Modelo_e_pipeline/tech_challenge_fase_4.ipynb
+vscode notebook Modelo_e_pipeline/tech_challenge_fase_4.ipynb
 
 
 O notebook gera os arquivos modelo.pkl e pipeline.pkl dentro da pasta Modelo_e_pipeline/.
@@ -157,46 +150,16 @@ streamlit run app.py
 O aplicativo abrirá no navegador em http://localhost:8501. Insira os dados nos campos e clique em Prever para obter a classificação.
 
 
-
-🔗 Links das Entregas
-
-| Entrega | URL | 🎥 Vídeo de Apresentação | https://youtube.com/seu-video |
+🎥 Vídeo de Apresentação | https://youtu.be/ahwumbIUD1k |
 
 
-
-Nota: Substitua os links acima pelos endereços reais após o deploy.
-
-
-
-👥 Autores / Contribuidores
-
-
-
-
-
-Nome do Aluno 1 – @usuario1
-
-
-
-
-Nome do Aluno 2 – @usuario2
-
-
-
-
-Nome do Aluno 3 – @usuario3
-
-
-
-
-Nome do Aluno 4 – @usuario4
-
+👥 Autora 
+Katia Caroline Wilkomm
 
 
 Projeto desenvolvido como parte do Tech Challenge – Fase 4 da Pós-Graduação em Data Analytics da FIAP.
 
 
-
 📝 Licença
 
-Este projeto é de uso acadêmico e não possui fins comerciais. Distribuído sob a licença MIT.
+Este projeto é de uso acadêmico e não possui fins comerciais. 
