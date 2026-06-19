@@ -1,9 +1,20 @@
+import os
 import streamlit as st
 import pandas as pd
 import numpy as np
 import plotly.express as px
 import plotly.graph_objects as go
 from datetime import datetime
+
+
+# Descobre a pasta exata onde o app.py está rodando
+pasta_atual = os.path.dirname(os.path.abspath(__file__))
+
+# Junta a pasta com o nome da imagem
+caminho_imagem = os.path.join(pasta_atual, "stethoscope-medical-tool.png")
+
+# Exibe a imagem usando o caminho completo
+st.image(caminho_imagem, width=80)
 
 # Dicionários de mapeamento para os selectboxes
 fcvc_map = {"Nunca ou raramente": 1, "Às vezes": 2, "Frequentemente": 3}
