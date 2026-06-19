@@ -106,7 +106,6 @@ with st.sidebar:
 </div>
 """, unsafe_allow_html=True)
 
-
 # Placeholder para modelo
 @st.cache_resource
 def carregar_modelo():
@@ -158,7 +157,6 @@ def multiselect_pt(label, options, key):
 def exportar_pdf(df, fig_rosca, fig_barras, fig_sunburst):
     from fpdf import FPDF
     import tempfile
-    import os
 
     def formatar_texto(txt):
         return str(txt).encode('latin-1', 'replace').decode('latin-1')
@@ -186,48 +184,44 @@ def exportar_pdf(df, fig_rosca, fig_barras, fig_sunburst):
         pdf.ln()
 
     # Inserção dos gráficos no PDF
+    tmp_rosca = None
+    tmp_barras = None
+    tmp_sunburst = None
     try:
         pdf.add_page()
         pdf.set_font("Arial", "B", 14)
         pdf.cell(277, 10, formatar_texto("Visualização Gráfica dos Filtros Aplicados"), ln=True, align='C')
         pdf.ln(5)
 
-        with tempfile.NamedTemporaryFile(delete=False, suffix=".png") as tmp_rosca, \
-             tempfile.NamedTemporaryFile(delete=False, suffix=".png") as tmp_barras, \
-             tempfile.NamedTemporaryFile(delete=False, suffix=".png") as tmp_sunburst:
+        tmp_rosca = tempfile.NamedTemporaryFile(delete=False, suffix=".png")
+        tmp_barras = tempfile.NamedTemporaryFile(delete=False, suffix=".png")
+        tmp_sunburst = tempfile.NamedTemporaryFile(delete=False, suffix=".png")
 
-            try:
-                fig_rosca.write_image(tmp_rosca.name, format="png")
-                fig_barras.write_image(tmp_barras.name, format="png")
-                fig_sunburst.write_image(tmp_sunburst.name, format="png")
-            except Exception as e:
-                raise RuntimeError(f"Erro ao renderizar imagens dos gráficos: {e}")
+        fig_rosca.write_image(tmp_rosca.name, format="png")
+        fig_barras.write_image(tmp_barras.name, format="png")
+        fig_sunburst.write_image(tmp_sunburst.name, format="png")
 
-            try:
-                pdf.image(tmp_rosca.name, x=10, y=30, w=130)
-                pdf.image(tmp_barras.name, x=150, y=30, w=130)
-                pdf.image(tmp_sunburst.name, x=80, y=115, w=130)
-            except Exception as e:
-                raise RuntimeError(f"Erro ao inserir imagens no PDF: {e}")
+        tmp_rosca.close()
+        tmp_barras.close()
+        tmp_sunburst.close()
 
-            finally:
-                # Garante a remoção dos arquivos temporários mesmo em caso de erro
-                for tmp in [tmp_rosca, tmp_barras, tmp_sunburst]:
-                    try:
-                        os.unlink(tmp.name)
-                    except Exception:
-                        pass
+        pdf.image(tmp_rosca.name, x=10, y=30, w=130)
+        pdf.image(tmp_barras.name, x=150, y=30, w=130)
+        pdf.image(tmp_sunburst.name, x=80, y=115, w=130)
 
     except Exception as e:
-        # Se houver erro nos gráficos, continua gerando o PDF, mas avisa no próprio relatório
+        # Se o gráfico falhar, mostra o aviso no PDF, mas CONTINUA gerando o documento!
         pdf.ln(10)
         pdf.set_font("Arial", "I", 10)
-        pdf.set_text_color(255, 0, 0)
-        pdf.cell(277, 10, formatar_texto(f"Aviso: Não foi possível exportar os gráficos para este PDF. ({e})"), ln=True, align='C')
-        pdf.set_text_color(0, 0, 0)
-        # Reexibe o erro na tela também para feedback ao usuário
-        import streamlit as st
-        st.warning(f"Aviso na exportação do PDF: {e}")
+        pdf.cell(277, 10, formatar_texto(f"Aviso: Não foi possível exportar os gráficos para este PDF. Erro: {e}"), ln=True, align='C')
+    finally:
+        # Garante a remoção dos arquivos temporários mesmo se houver erro
+        for tmp in (tmp_rosca, tmp_barras, tmp_sunburst):
+            if tmp is not None:
+                try:
+                    os.unlink(tmp.name)
+                except OSError:
+                    pass
 
     out = pdf.output()
     return bytes(out)
@@ -250,10 +244,8 @@ config_grafico = {
 # ---------- PÁGINA AVALIAÇÃO PESSOAL ----------
 if pagina == "Avaliação Pessoal":
     st.markdown("## Formulário de Avaliação")
-
     with st.form(key="form_avaliacao"):
         col1, col2, col3 = st.columns(3)
-
         with col1:
             age = st.number_input("Idade", min_value=10, max_value=100, value=25)
             fcvc_label = st.selectbox("Frequência de consumo de vegetais", list(fcvc_map.keys()))
@@ -266,7 +258,6 @@ if pagina == "Avaliação Pessoal":
             faf = faf_map[faf_label]
             tue_label = st.selectbox("Tempo de uso de eletrônicos", list(tue_map.keys()))
             tue = tue_map[tue_label]
-
         with col2:
             gender = st.selectbox("Gênero", ["Feminino", "Masculino"])
             family_history = st.selectbox("Histórico familiar de obesidade", ["Não", "Sim"])
@@ -275,35 +266,23 @@ if pagina == "Avaliação Pessoal":
             caec = caec_map[caec_label]
             smoke = st.selectbox("Fumante", ["Não", "Sim"])
             scc = st.selectbox("Consumo de calorias", ["Não", "Sim"])
-
         with col3:
             calc_label = st.selectbox("Consumo de álcool", list(calc_map.keys()))
             calc = calc_map[calc_label]
             mtrans_label = st.selectbox("Transporte", list(mtrans_map.keys()))
             mtrans = mtrans_map[mtrans_label]
-
         submit = st.form_submit_button("Prever")
-
         if submit:
             genero = 1 if gender == "Masculino" else 0
             hist_familiar = 1 if family_history == "Sim" else 0
             favc_val = 1 if favc == "Sim" else 0
             smoke_val = 1 if smoke == "Sim" else 0
             scc_val = 1 if scc == "Sim" else 0
-
             features = np.array([[age, fcvc, ncp, ch2o, faf, tue, genero, hist_familiar, favc_val, caec, smoke_val, scc_val, calc, mtrans, 0, 0]])
-
-            try:
-                classe = modelo.predict(features)[0]
-                probas = modelo.predict_proba(features)[0]
-            except Exception as e:
-                st.error(f"Erro na predição do modelo: {e}")
-                classe = 0
-                probas = np.full(7, 1 / 7)
-
+            classe = modelo.predict(features)[0]
+            probas = modelo.predict_proba(features)[0]
             rotulo = classe_rotulo(classe)
             confianca = np.max(probas)
-
             st.session_state.historico.append({
                 "data": datetime.now().strftime("%d/%m/%Y %H:%M"),
                 "features": features.tolist()[0],
@@ -311,18 +290,15 @@ if pagina == "Avaliação Pessoal":
                 "rotulo": rotulo,
                 "confianca": confianca
             })
-
             st.markdown(f"### Resultado: {rotulo}")
             st.progress(confianca, text=f"Confiança: {confianca:.0%}")
-
             df_probas = pd.DataFrame({
                 "Classe": [classe_rotulo(i) for i in range(7)],
                 "Probabilidade": probas
             })
-
             fig = px.bar(df_probas, x="Classe", y="Probabilidade", color="Classe",
-                        color_discrete_sequence=PALETA,
-                        title="Probabilidades por Classe")
+                         color_discrete_sequence=PALETA,
+                         title="Probabilidades por Classe")
             fig.update_traces(hovertemplate='<b>%{x}</b><br>Probabilidade: %{y:.1%}<extra></extra>')
             fig.update_layout(hovermode='x unified', dragmode='select')
             st.plotly_chart(fig, use_container_width=True, config=config_grafico)
@@ -330,24 +306,18 @@ if pagina == "Avaliação Pessoal":
 # ---------- PÁGINA DASHBOARD GERAL ----------
 elif pagina == "Dashboard Geral":
     st.markdown("## Dashboard Geral - Análise por Perfil")
-
     if len(st.session_state.historico) > 0:
         df_hist = pd.DataFrame(st.session_state.historico)
-
         df_hist["Idade"] = df_hist["features"].apply(lambda x: x[0])
         df_hist["Gênero"] = df_hist["features"].apply(lambda x: "Masculino" if x[6] == 1 else "Feminino")
         df_hist["Histórico familiar de obesidade"] = df_hist["features"].apply(lambda x: "Sim" if x[7] == 1 else "Não")
-
         rev_faf = {v: k for k, v in faf_map.items()}
         df_hist["Frequência de atividade física"] = df_hist["features"].apply(lambda x: rev_faf.get(x[4], "Desconhecido"))
-
         rev_fcvc = {v: k for k, v in fcvc_map.items()}
         df_hist["Frequência de consumo de vegetais"] = df_hist["features"].apply(lambda x: rev_fcvc.get(x[1], "Desconhecido"))
-
         bins = [0, 25, 35, 50, 65, 100]
         labels_idade = ["Até 25", "26-35", "36-50", "51-65", "65+"]
         df_hist["Faixa Etária"] = pd.cut(df_hist["Idade"], bins=bins, labels=labels_idade, right=False)
-
         st.markdown("### 🔍 Filtros Específicos")
         col_btn, _ = st.columns([1, 5])
         with col_btn:
@@ -356,9 +326,7 @@ elif pagina == "Dashboard Geral":
                     if key in st.session_state:
                         del st.session_state[key]
                 st.rerun()
-
         col_f1, col_f2, col_f3, col_f4, col_f5 = st.columns(5)
-
         with col_f1:
             faixas_sel = multiselect_pt("Faixa Etária", labels_idade, 'faixas_sel')
         with col_f2:
@@ -369,7 +337,6 @@ elif pagina == "Dashboard Geral":
             hist_sel = multiselect_pt("Histórico familiar de obesidade", ["Sim", "Não"], 'hist_sel')
         with col_f5:
             freq_sel = multiselect_pt("Frequência de consumo de vegetais", list(rev_fcvc.values()), 'freq_sel')
-
         mask = pd.Series(True, index=df_hist.index)
         if faixas_sel:
             mask &= df_hist["Faixa Etária"].isin(faixas_sel)
@@ -381,9 +348,7 @@ elif pagina == "Dashboard Geral":
             mask &= df_hist["Histórico familiar de obesidade"].isin(hist_sel)
         if freq_sel:
             mask &= df_hist["Frequência de consumo de vegetais"].isin(freq_sel)
-
         df_filtrado = df_hist[mask]
-
         if df_filtrado.empty:
             st.warning("Nenhum dado corresponde aos filtros selecionados.")
         else:
@@ -391,11 +356,8 @@ elif pagina == "Dashboard Geral":
             col_s1.metric("Total de Avaliações", len(df_filtrado))
             col_s2.metric("Classes Distintas", df_filtrado["rotulo"].nunique())
             col_s3.metric("Confiança Média", f"{df_filtrado['confianca'].mean():.2%}")
-
             st.markdown("---")
-
             col_g1, col_g2 = st.columns(2)
-
             with col_g1:
                 fig_rosca = px.pie(
                     df_filtrado,
@@ -410,7 +372,6 @@ elif pagina == "Dashboard Geral":
                 )
                 fig_rosca.update_layout(legend=dict(font=dict(size=10)))
                 st.plotly_chart(fig_rosca, use_container_width=True, config=config_grafico)
-
             with col_g2:
                 df_barras = df_filtrado.groupby(["Faixa Etária", "Gênero", "rotulo"], observed=False).size().reset_index(name="Contagem")
                 fig_barras = px.bar(
@@ -426,7 +387,6 @@ elif pagina == "Dashboard Geral":
                 fig_barras.update_traces(hovertemplate="<<b>%{x}</b><br>Quantidade: %{y}<extra></extra>")
                 fig_barras.update_layout(legend=dict(font=dict(size=10)))
                 st.plotly_chart(fig_barras, use_container_width=True, config=config_grafico)
-
             df_sunburst = df_filtrado.groupby(["Frequência de atividade física", "Gênero", "rotulo"], observed=False).size().reset_index(name="Contagem")
             fig_sunburst = px.sunburst(
                 df_sunburst,
@@ -460,7 +420,6 @@ elif pagina == "Dashboard Geral":
 # ---------- PÁGINA DADOS DO MODELO ----------
 elif pagina == "Dados do Modelo":
     st.markdown("## Dados do Modelo")
-
     st.markdown("### Informações Técnicas")
     st.markdown("""
 - **Algoritmo**: Random Forest Classifier (simulado)
@@ -483,16 +442,13 @@ elif pagina == "Dados do Modelo":
   - (Duas features adicionais de placeholder)
 - **Descrição**: Este modelo foi treinado em um dataset público de obesidade e estima o nível de obesidade com base em hábitos alimentares e estilo de vida.
 """)
-
     st.markdown("### Métricas de Desempenho")
     col1, col2, col3 = st.columns(3)
     col1.metric("Acurácia", "94%")
     col2.metric("Precisão", "92%")
     col3.metric("Recall", "91%")
-
     st.markdown("---")
     st.markdown("### Matriz de Confusão (dados de teste)")
-
     cm = np.array([
         [50, 5, 3, 2, 1, 0, 0],
         [4, 60, 6, 1, 0, 0, 0],
@@ -502,7 +458,6 @@ elif pagina == "Dados do Modelo":
         [0, 0, 1, 2, 3, 30, 2],
         [0, 0, 0, 1, 2, 3, 25]
     ])
-
     fig_cm = px.imshow(
         cm,
         text_auto=True,
