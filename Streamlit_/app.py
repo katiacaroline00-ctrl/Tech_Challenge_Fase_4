@@ -221,12 +221,9 @@ def exportar_pdf(df, fig_rosca, fig_barras, fig_sunburst):
             pdf.set_font("Arial", "I", 10)
             pdf.cell(277, 10, formatar_texto("(Aviso: Não foi possível exportar os gráficos. Verifique se o pacote 'kaleido' está instalado.)"), ln=True, align='C')
             
-        out = pdf.output(dest='S')
-        if isinstance(out, str):
-            return out.encode('latin1')
-        return out
-    except ImportError:
-        return None
+              # O fpdf2 gera o PDF, e nós convertemos para o formato exato que o Streamlit exige
+        out = pdf.output()
+        return bytes(out)
 
 col1, col2 = st.columns([1, 5])
 with col1:
