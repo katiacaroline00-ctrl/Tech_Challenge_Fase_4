@@ -4,4 +4,4 @@ numpy
 scikit-learn
 plotly
 fpdf
-kaleido==0.1.0.post1
+kaleido
