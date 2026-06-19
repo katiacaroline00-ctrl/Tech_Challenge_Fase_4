@@ -232,7 +232,7 @@ def exportar_pdf(df, fig_rosca, fig_barras, fig_sunburst):
 
 col1, col2 = st.columns([1, 5])
 with col1:
-    st.image("stethoscope-medical-tool.png", width=80)
+    st.image(caminho_imagem, width=80)
 with col2:
     st.markdown("<h1 style='color: {};'>HEALTHPredict</h1>".format(AZUL), unsafe_allow_html=True)
     st.markdown("<p style='color: #888888; font-size: 16px; margin-top: -10px;'>Sistema Inteligente de Apoio à Avaliação de Obesidade</p>", unsafe_allow_html=True)
