@@ -155,76 +155,70 @@ def multiselect_pt(label, options, key):
 
 
 def exportar_pdf(df, fig_rosca, fig_barras, fig_sunburst):
-    from fpdf import FPDF
-    import tempfile
-
-    def formatar_texto(txt):
-        return str(txt).encode('latin-1', 'replace').decode('latin-1')
-
-    pdf = FPDF(orientation='L', unit='mm', format='A4')
-    pdf.add_page()
-    pdf.set_font("Arial", "B", 14)
-    pdf.cell(277, 10, formatar_texto("Relatório de Análise de Perfil"), ln=True, align='C')
-    pdf.ln(5)
-    pdf.set_font("Arial", "B", 8)
-
-    colunas = ["Idade", "Gênero", "Frequência de atividade física", "Histórico familiar de obesidade", "Frequência de consumo de vegetais", "rotulo"]
-    titulos = ["Idade", "Gênero", "Frequência de atividade física", "Histórico familiar de obesidade", "Frequência de consumo de vegetais", "Predição"]
-    larguras = [15, 20, 55, 55, 72, 60]
-
-    for i, titulo in enumerate(titulos):
-        pdf.cell(larguras[i], 10, formatar_texto(titulo), border=1, align='C')
-    pdf.ln()
-
-    pdf.set_font("Arial", "", 8)
-    for _, row in df.iterrows():
-        for i, col in enumerate(colunas):
-            valor = str(row[col])
-            pdf.cell(larguras[i], 10, formatar_texto(valor), border=1, align='C')
-        pdf.ln()
-
-    # Inserção dos gráficos no PDF
-    tmp_rosca = None
-    tmp_barras = None
-    tmp_sunburst = None
     try:
+        from fpdf import FPDF
+        import tempfile
+        import os
+
+        def formatar_texto(txt):
+            # Garante que os acentos sejam exibidos corretamente no FPDF (latin-1)
+            return str(txt).encode('latin-1', 'replace').decode('latin-1')
+
+        pdf = FPDF(orientation='L', unit='mm', format='A4')
         pdf.add_page()
         pdf.set_font("Arial", "B", 14)
-        pdf.cell(277, 10, formatar_texto("Visualização Gráfica dos Filtros Aplicados"), ln=True, align='C')
+        pdf.cell(277, 10, formatar_texto("Relatório de Análise de Perfil"), ln=True, align='C')
         pdf.ln(5)
+        pdf.set_font("Arial", "B", 8)
 
-        tmp_rosca = tempfile.NamedTemporaryFile(delete=False, suffix=".png")
-        tmp_barras = tempfile.NamedTemporaryFile(delete=False, suffix=".png")
-        tmp_sunburst = tempfile.NamedTemporaryFile(delete=False, suffix=".png")
+        colunas = ["Idade", "Gênero", "Frequência de atividade física", "Histórico familiar de obesidade", "Frequência de consumo de vegetais", "rotulo"]
+        titulos = ["Idade", "Gênero", "Frequência de atividade física", "Histórico familiar de obesidade", "Frequência de consumo de vegetais", "Predição"]
+        larguras = [15, 20, 55, 55, 72, 60]
 
-        fig_rosca.write_image(tmp_rosca.name, format="png")
-        fig_barras.write_image(tmp_barras.name, format="png")
-        fig_sunburst.write_image(tmp_sunburst.name, format="png")
+        for i, titulo in enumerate(titulos):
+            pdf.cell(larguras[i], 10, formatar_texto(titulo), border=1, align='C')
+        pdf.ln()
 
-        tmp_rosca.close()
-        tmp_barras.close()
-        tmp_sunburst.close()
+        pdf.set_font("Arial", "", 8)
+        for _, row in df.iterrows():
+            for i, col in enumerate(colunas):
+                valor = str(row[col])
+                pdf.cell(larguras[i], 10, formatar_texto(valor), border=1, align='C')
+            pdf.ln()
 
-        pdf.image(tmp_rosca.name, x=10, y=30, w=130)
-        pdf.image(tmp_barras.name, x=150, y=30, w=130)
-        pdf.image(tmp_sunburst.name, x=80, y=115, w=130)
+        # Inserção dos gráficos no PDF
+        try:
+            pdf.add_page()
+            pdf.set_font("Arial", "B", 14)
+            pdf.cell(277, 10, formatar_texto("Visualização Gráfica dos Filtros Aplicados"), ln=True, align='C')
+            pdf.ln(5)
 
-    except Exception as e:
-        # Se o gráfico falhar, mostra o aviso no PDF, mas CONTINUA gerando o documento!
-        pdf.ln(10)
-        pdf.set_font("Arial", "I", 10)
-        pdf.cell(277, 10, formatar_texto(f"Aviso: Não foi possível exportar os gráficos para este PDF. Erro: {e}"), ln=True, align='C')
-    finally:
-        # Garante a remoção dos arquivos temporários mesmo se houver erro
-        for tmp in (tmp_rosca, tmp_barras, tmp_sunburst):
-            if tmp is not None:
-                try:
-                    os.unlink(tmp.name)
-                except OSError:
-                    pass
+            with tempfile.NamedTemporaryFile(delete=False, suffix=".png") as tmp_rosca, \
+                 tempfile.NamedTemporaryFile(delete=False, suffix=".png") as tmp_barras, \
+                 tempfile.NamedTemporaryFile(delete=False, suffix=".png") as tmp_sunburst:
 
-    out = pdf.output()
-    return bytes(out)
+                fig_rosca.write_image(tmp_rosca.name, format="png")
+                fig_barras.write_image(tmp_barras.name, format="png")
+                fig_sunburst.write_image(tmp_sunburst.name, format="png")
+
+                # Posicionamento das imagens no PDF (A4 Paisagem: 297x210mm)
+                pdf.image(tmp_rosca.name, x=10, y=30, w=130)
+                pdf.image(tmp_barras.name, x=150, y=30, w=130)
+                pdf.image(tmp_sunburst.name, x=80, y=115, w=130)
+
+            os.unlink(tmp_rosca.name)
+            os.unlink(tmp_barras.name)
+            os.unlink(tmp_sunburst.name)
+        except Exception:
+            pdf.ln(10)
+            pdf.set_font("Arial", "I", 10)
+            pdf.cell(277, 10, formatar_texto("(Aviso: Não foi possível exportar os gráficos. Verifique se o pacote 'kaleido' está instalado.)"), ln=True, align='C')
+
+        # O fpdf2 gera o PDF
+        out = pdf.output()
+        return bytes(out)
+    except ImportError:
+        return None
 
 
 col1, col2 = st.columns([1, 5])
@@ -271,18 +265,22 @@ if pagina == "Avaliação Pessoal":
             calc = calc_map[calc_label]
             mtrans_label = st.selectbox("Transporte", list(mtrans_map.keys()))
             mtrans = mtrans_map[mtrans_label]
+
         submit = st.form_submit_button("Prever")
+
         if submit:
             genero = 1 if gender == "Masculino" else 0
             hist_familiar = 1 if family_history == "Sim" else 0
             favc_val = 1 if favc == "Sim" else 0
             smoke_val = 1 if smoke == "Sim" else 0
             scc_val = 1 if scc == "Sim" else 0
+
             features = np.array([[age, fcvc, ncp, ch2o, faf, tue, genero, hist_familiar, favc_val, caec, smoke_val, scc_val, calc, mtrans, 0, 0]])
             classe = modelo.predict(features)[0]
             probas = modelo.predict_proba(features)[0]
             rotulo = classe_rotulo(classe)
             confianca = np.max(probas)
+
             st.session_state.historico.append({
                 "data": datetime.now().strftime("%d/%m/%Y %H:%M"),
                 "features": features.tolist()[0],
@@ -290,12 +288,15 @@ if pagina == "Avaliação Pessoal":
                 "rotulo": rotulo,
                 "confianca": confianca
             })
+
             st.markdown(f"### Resultado: {rotulo}")
             st.progress(confianca, text=f"Confiança: {confianca:.0%}")
+
             df_probas = pd.DataFrame({
                 "Classe": [classe_rotulo(i) for i in range(7)],
                 "Probabilidade": probas
             })
+
             fig = px.bar(df_probas, x="Classe", y="Probabilidade", color="Classe",
                          color_discrete_sequence=PALETA,
                          title="Probabilidades por Classe")
@@ -311,13 +312,17 @@ elif pagina == "Dashboard Geral":
         df_hist["Idade"] = df_hist["features"].apply(lambda x: x[0])
         df_hist["Gênero"] = df_hist["features"].apply(lambda x: "Masculino" if x[6] == 1 else "Feminino")
         df_hist["Histórico familiar de obesidade"] = df_hist["features"].apply(lambda x: "Sim" if x[7] == 1 else "Não")
+
         rev_faf = {v: k for k, v in faf_map.items()}
         df_hist["Frequência de atividade física"] = df_hist["features"].apply(lambda x: rev_faf.get(x[4], "Desconhecido"))
+
         rev_fcvc = {v: k for k, v in fcvc_map.items()}
         df_hist["Frequência de consumo de vegetais"] = df_hist["features"].apply(lambda x: rev_fcvc.get(x[1], "Desconhecido"))
+
         bins = [0, 25, 35, 50, 65, 100]
         labels_idade = ["Até 25", "26-35", "36-50", "51-65", "65+"]
         df_hist["Faixa Etária"] = pd.cut(df_hist["Idade"], bins=bins, labels=labels_idade, right=False)
+
         st.markdown("### 🔍 Filtros Específicos")
         col_btn, _ = st.columns([1, 5])
         with col_btn:
@@ -326,6 +331,7 @@ elif pagina == "Dashboard Geral":
                     if key in st.session_state:
                         del st.session_state[key]
                 st.rerun()
+
         col_f1, col_f2, col_f3, col_f4, col_f5 = st.columns(5)
         with col_f1:
             faixas_sel = multiselect_pt("Faixa Etária", labels_idade, 'faixas_sel')
@@ -337,6 +343,7 @@ elif pagina == "Dashboard Geral":
             hist_sel = multiselect_pt("Histórico familiar de obesidade", ["Sim", "Não"], 'hist_sel')
         with col_f5:
             freq_sel = multiselect_pt("Frequência de consumo de vegetais", list(rev_fcvc.values()), 'freq_sel')
+
         mask = pd.Series(True, index=df_hist.index)
         if faixas_sel:
             mask &= df_hist["Faixa Etária"].isin(faixas_sel)
@@ -348,7 +355,9 @@ elif pagina == "Dashboard Geral":
             mask &= df_hist["Histórico familiar de obesidade"].isin(hist_sel)
         if freq_sel:
             mask &= df_hist["Frequência de consumo de vegetais"].isin(freq_sel)
+
         df_filtrado = df_hist[mask]
+
         if df_filtrado.empty:
             st.warning("Nenhum dado corresponde aos filtros selecionados.")
         else:
@@ -357,6 +366,7 @@ elif pagina == "Dashboard Geral":
             col_s2.metric("Classes Distintas", df_filtrado["rotulo"].nunique())
             col_s3.metric("Confiança Média", f"{df_filtrado['confianca'].mean():.2%}")
             st.markdown("---")
+
             col_g1, col_g2 = st.columns(2)
             with col_g1:
                 fig_rosca = px.pie(
@@ -372,6 +382,7 @@ elif pagina == "Dashboard Geral":
                 )
                 fig_rosca.update_layout(legend=dict(font=dict(size=10)))
                 st.plotly_chart(fig_rosca, use_container_width=True, config=config_grafico)
+
             with col_g2:
                 df_barras = df_filtrado.groupby(["Faixa Etária", "Gênero", "rotulo"], observed=False).size().reset_index(name="Contagem")
                 fig_barras = px.bar(
@@ -387,6 +398,7 @@ elif pagina == "Dashboard Geral":
                 fig_barras.update_traces(hovertemplate="<<b>%{x}</b><br>Quantidade: %{y}<extra></extra>")
                 fig_barras.update_layout(legend=dict(font=dict(size=10)))
                 st.plotly_chart(fig_barras, use_container_width=True, config=config_grafico)
+
             df_sunburst = df_filtrado.groupby(["Frequência de atividade física", "Gênero", "rotulo"], observed=False).size().reset_index(name="Contagem")
             fig_sunburst = px.sunburst(
                 df_sunburst,
@@ -402,18 +414,16 @@ elif pagina == "Dashboard Geral":
             # --- SEÇÃO DE EXPORTAÇÃO ---
             st.markdown("---")
             st.subheader("📥 Exportação de Dados")
-
-            try:
-                pdf_bytes = exportar_pdf(df_filtrado, fig_rosca, fig_barras, fig_sunburst)
+            pdf_bytes = exportar_pdf(df_filtrado, fig_rosca, fig_barras, fig_sunburst)
+            if pdf_bytes:
                 st.download_button(
                     label="📄 Exportar Relatório em PDF",
                     data=pdf_bytes,
                     file_name='relatorio_analise_perfil.pdf',
                     mime='application/pdf',
                 )
-            except Exception as e:
-                st.error(f"Erro crítico na criação do PDF: {e}")
-
+            else:
+                st.info("💡 Para habilitar a exportação em PDF com gráficos, instale as bibliotecas executando no terminal: pip install fpdf kaleido")
     else:
         st.info("Nenhuma avaliação realizada ainda. Vá para a página 'Avaliação Pessoal' e faça uma predição.")
 
