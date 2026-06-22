@@ -5,6 +5,7 @@ import numpy as np
 import plotly.express as px
 import plotly.graph_objects as go
 from datetime import datetime
+import random
 
 # Dicionários de mapeamento para os selectboxes
 fcvc_map = {"Nunca ou raramente": 1, "Às vezes": 2, "Frequentemente": 3}
@@ -133,9 +134,9 @@ def classe_rotulo(classe):
     return rotulos.get(classe, "Desconhecido")
 
 def multiselect_pt(label, options, key):
-    opcoes_pt = ["Selecionar tudo"] + options
-    selecionados = st.multiselect(label, options=opcoes_pt, default=[], placeholder="Escolha as opções", key=key)
-    if "Selecionar tudo" in selecionados:
+    selecionar_todos = st.checkbox("Selecionar todos", key=f"check_all_{key}", value=False)
+    selecionados = st.multiselect(label, options=options, default=[], placeholder="Escolha as opções", key=key)
+    if selecionar_todos:
         return options
     return selecionados
 
@@ -144,12 +145,17 @@ def exportar_pdf(df, fig_rosca, fig_barras, fig_sunburst):
         from fpdf import FPDF
         import tempfile
         import os
+        from io import BytesIO
+    except ImportError:
+        return None
+
+    pdf = None
+    try:
+        pdf = FPDF(orientation='L', unit='mm', format='A4')
 
         def formatar_texto(txt):
-            # Garante que os acentos sejam exibidos corretamente no FPDF (latin-1)
             return str(txt).encode('latin-1', 'replace').decode('latin-1')
 
-        pdf = FPDF(orientation='L', unit='mm', format='A4')
         pdf.add_page()
         pdf.set_font("Arial", "B", 14)
         pdf.cell(277, 10, formatar_texto("Relatório de Análise de Perfil"), ln=True, align='C')
@@ -172,6 +178,7 @@ def exportar_pdf(df, fig_rosca, fig_barras, fig_sunburst):
             pdf.ln()
 
         # Inserção dos gráficos no PDF
+        tem_graficos = False
         try:
             pdf.add_page()
             pdf.set_font("Arial", "B", 14)
@@ -186,24 +193,29 @@ def exportar_pdf(df, fig_rosca, fig_barras, fig_sunburst):
                 fig_barras.write_image(tmp_barras.name, format="png")
                 fig_sunburst.write_image(tmp_sunburst.name, format="png")
 
-                # Posicionamento das imagens no PDF (A4 Paisagem: 297x210mm)
                 pdf.image(tmp_rosca.name, x=10, y=30, w=130)
                 pdf.image(tmp_barras.name, x=150, y=30, w=130)
                 pdf.image(tmp_sunburst.name, x=80, y=115, w=130)
 
                 os.unlink(tmp_rosca.name)
                 os.unlink(tmp_barras.name)
+                os.unlink(tmp_barras.name)
                 os.unlink(tmp_sunburst.name)
+
+            tem_graficos = True
         except Exception:
+            pass
+
+        if not tem_graficos:
             pdf.ln(10)
             pdf.set_font("Arial", "I", 10)
             pdf.cell(277, 10, formatar_texto("(Aviso: Não foi possível exportar os gráficos. Verifique se o pacote 'kaleido' está instalado.)"), ln=True, align='C')
 
-        out = pdf.output(dest='S')
-        if isinstance(out, str):
-            return out.encode('latin1')
-        return out
-    except ImportError:
+        buffer = BytesIO()
+        pdf.output(buffer)
+        return buffer.getvalue()
+
+    except Exception:
         return None
 
 col1, col2 = st.columns([1, 5])
@@ -322,26 +334,27 @@ elif pagina == "Dashboard Geral":
         col_btn, _ = st.columns([1, 5])
         with col_btn:
             if st.button("Limpar Filtros"):
-                st.session_state["_reset_filters"] = True
-                for key in ['faixas_sel', 'generos_sel', 'habitos_sel', 'hist_sel', 'freq_sel']:
-                    if key in st.session_state:
-                        del st.session_state[key]
+                st.session_state["_reset_seed"] = random.random()
+                for key_base in ['faixas_sel', 'generos_sel', 'habitos_sel', 'hist_sel', 'freq_sel']:
+                    for k in list(st.session_state.keys()):
+                        if k.startswith(key_base) or k.startswith(f'check_all_{key_base}'):
+                            del st.session_state[k]
                 st.rerun()
 
         col_f1, col_f2, col_f3, col_f4, col_f5 = st.columns(5)
 
-        reset_suffix = st.session_state.get("_reset_filters", False)
+        reset_seed = st.session_state.get("_reset_seed", 0)
 
         with col_f1:
-            faixas_sel = multiselect_pt("Faixa Etária", labels_idade, f'faixas_sel_{reset_suffix}')
+            faixas_sel = multiselect_pt("Faixa Etária", labels_idade, f'faixas_sel_{reset_seed}')
         with col_f2:
-            generos_sel = multiselect_pt("Gênero", ["Feminino", "Masculino"], f'generos_sel_{reset_suffix}')
+            generos_sel = multiselect_pt("Gênero", ["Feminino", "Masculino"], f'generos_sel_{reset_seed}')
         with col_f3:
-            habitos_sel = multiselect_pt("Frequência de atividade física", list(rev_faf.values()), f'habitos_sel_{reset_suffix}')
+            habitos_sel = multiselect_pt("Frequência de atividade física", list(rev_faf.values()), f'habitos_sel_{reset_seed}')
         with col_f4:
-            hist_sel = multiselect_pt("Histórico familiar de obesidade", ["Sim", "Não"], f'hist_sel_{reset_suffix}')
+            hist_sel = multiselect_pt("Histórico familiar de obesidade", ["Sim", "Não"], f'hist_sel_{reset_seed}')
         with col_f5:
-            freq_sel = multiselect_pt("Frequência de consumo de vegetais", list(rev_fcvc.values()), f'freq_sel_{reset_suffix}')
+            freq_sel = multiselect_pt("Frequência de consumo de vegetais", list(rev_fcvc.values()), f'freq_sel_{reset_seed}')
 
         mask = pd.Series(True, index=df_hist.index)
 
