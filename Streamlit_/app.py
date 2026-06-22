@@ -1,3 +1,4 @@
+import os
 import streamlit as st
 import pandas as pd
 import numpy as np
@@ -222,10 +223,14 @@ def exportar_pdf(df, fig_rosca, fig_barras, fig_sunburst):
 
 col1, col2 = st.columns([1, 5])
 with col1:
-    st.image("stethoscope-medical-tool.png", width=80)
+    image_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "stethoscope-medical-tool.png")
+    if os.path.exists(image_path):
+        st.image(image_path, width=80)
+    else:
+        st.markdown("<<h1 style='text-align: center; margin: 0px;'>🩺</h1>", unsafe_allow_html=True)
 with col2:
-    st.markdown("<h1 style='color: {};'>HEALTHPredict</h1>".format(AZUL), unsafe_allow_html=True)
-    st.markdown("<p style='color: #888888; font-size: 16px; margin-top: -10px;'>Sistema Inteligente de Apoio à Avaliação de Obesidade</p>", unsafe_allow_html=True)
+    st.markdown("<<h1 style='color: {};'>HEALTHPredict</h1>".format(AZUL), unsafe_allow_html=True)
+st.markdown("<<p style='color: #888888; font-size: 16px; margin-top: -10px;'>Sistema Inteligente de Apoio à Avaliação de Obesidade</p>", unsafe_allow_html=True)
 st.markdown("---")
 
 config_grafico = {
