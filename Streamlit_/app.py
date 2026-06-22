@@ -171,7 +171,6 @@ def exportar_pdf(df, fig_rosca, fig_barras, fig_sunburst):
                 pdf.cell(larguras[i], 10, formatar_texto(valor), border=1, align='C')
             pdf.ln()
 
-        # Tenta inserir os gráficos
         try:
             pdf.add_page()
             pdf.set_font("Arial", "B", 14)
@@ -312,7 +311,7 @@ elif pagina == "Dashboard Geral":
         rev_fcvc = {v: k for k, v in fcvc_map.items()}
         df_hist["Frequência de consumo de vegetais"] = df_hist["features"].apply(lambda x: rev_fcvc.get(x[1], "Desconhecido"))
 
-        bins = [0, 25, 35, 50, 65, 100]
+        bins = [0, 26, 36, 51, 66, 100]
         labels_idade = ["Até 25", "26-35", "36-50", "51-65", "65+"]
         df_hist["Faixa Etária"] = pd.cut(df_hist["Idade"], bins=bins, labels=labels_idade, right=False)
 
