@@ -139,14 +139,17 @@ def multiselect_pt(label, options, key):
 def exportar_pdf(df, fig_rosca, fig_barras, fig_sunburst):
     try:
         from fpdf import FPDF
+        from io import BytesIO
+        import tempfile
     except ImportError:
         return None
 
     try:
+        pdf = FPDF(orientation='L', unit='mm', format='A4')
+
         def formatar_texto(txt):
             return str(txt).encode('latin-1', 'replace').decode('latin-1')
 
-        pdf = FPDF(orientation='L', unit='mm', format='A4')
         pdf.add_page()
         pdf.set_font("Arial", "B", 14)
         pdf.cell(277, 10, formatar_texto("Relatório de Análise de Perfil"), ln=True, align='C')
@@ -175,7 +178,6 @@ def exportar_pdf(df, fig_rosca, fig_barras, fig_sunburst):
             pdf.cell(277, 10, formatar_texto("Visualização Gráfica dos Filtros Aplicados"), ln=True, align='C')
             pdf.ln(5)
 
-            import tempfile
             with tempfile.NamedTemporaryFile(delete=False, suffix=".png") as tmp_rosca, \
                  tempfile.NamedTemporaryFile(delete=False, suffix=".png") as tmp_barras, \
                  tempfile.NamedTemporaryFile(delete=False, suffix=".png") as tmp_sunburst:
@@ -190,17 +192,15 @@ def exportar_pdf(df, fig_rosca, fig_barras, fig_sunburst):
 
                 os.unlink(tmp_rosca.name)
                 os.unlink(tmp_barras.name)
-                os.unlink(tmp_barras.name)
                 os.unlink(tmp_sunburst.name)
         except Exception:
             pdf.ln(10)
             pdf.set_font("Arial", "I", 10)
             pdf.cell(277, 10, formatar_texto("(Aviso: Não foi possível exportar os gráficos. Verifique se o pacote 'kaleido' está instalado.)"), ln=True, align='C')
 
-        out = pdf.output(dest='S')
-        if isinstance(out, str):
-            return out.encode('latin-1')
-        return out
+        buffer = BytesIO()
+        pdf.output(buffer)
+        return buffer.getvalue()
 
     except Exception:
         return None
@@ -430,7 +430,7 @@ elif pagina == "Dashboard Geral":
                     mime='application/pdf',
                 )
             else:
-                st.info("💡 Para habilitar a exportação em PDF com gráficos, instale as bibliotecas executando no terminal: `pip install fpdf2 kaleido`")
+                st.info("💡 Para habilitar a exportação em PDF com gráficos, instale as bibliotecas: `pip install fpdf2 kaleido`")
 
     else:
         st.info("Nenhuma avaliação realizada ainda. Vá para a página 'Avaliação Pessoal' e faça uma predição.")
