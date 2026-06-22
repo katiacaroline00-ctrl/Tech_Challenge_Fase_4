@@ -134,28 +134,19 @@ def classe_rotulo(classe):
     return rotulos.get(classe, "Desconhecido")
 
 def multiselect_pt(label, options, key):
-    selecionar_todos = st.checkbox("Selecionar todos", key=f"check_all_{key}", value=False)
-    selecionados = st.multiselect(label, options=options, default=[], placeholder="Escolha as opções", key=key)
-    if selecionar_todos:
-        return options
-    return selecionados
+    return st.multiselect(label, options=options, default=[], placeholder="Escolha as opções", key=key)
 
 def exportar_pdf(df, fig_rosca, fig_barras, fig_sunburst):
     try:
         from fpdf import FPDF
-        import tempfile
-        import os
-        from io import BytesIO
     except ImportError:
         return None
 
-    pdf = None
     try:
-        pdf = FPDF(orientation='L', unit='mm', format='A4')
-
         def formatar_texto(txt):
             return str(txt).encode('latin-1', 'replace').decode('latin-1')
 
+        pdf = FPDF(orientation='L', unit='mm', format='A4')
         pdf.add_page()
         pdf.set_font("Arial", "B", 14)
         pdf.cell(277, 10, formatar_texto("Relatório de Análise de Perfil"), ln=True, align='C')
@@ -177,14 +168,14 @@ def exportar_pdf(df, fig_rosca, fig_barras, fig_sunburst):
                 pdf.cell(larguras[i], 10, formatar_texto(valor), border=1, align='C')
             pdf.ln()
 
-        # Inserção dos gráficos no PDF
-        tem_graficos = False
+        # Tenta inserir os gráficos
         try:
             pdf.add_page()
             pdf.set_font("Arial", "B", 14)
             pdf.cell(277, 10, formatar_texto("Visualização Gráfica dos Filtros Aplicados"), ln=True, align='C')
             pdf.ln(5)
 
+            import tempfile
             with tempfile.NamedTemporaryFile(delete=False, suffix=".png") as tmp_rosca, \
                  tempfile.NamedTemporaryFile(delete=False, suffix=".png") as tmp_barras, \
                  tempfile.NamedTemporaryFile(delete=False, suffix=".png") as tmp_sunburst:
@@ -201,19 +192,15 @@ def exportar_pdf(df, fig_rosca, fig_barras, fig_sunburst):
                 os.unlink(tmp_barras.name)
                 os.unlink(tmp_barras.name)
                 os.unlink(tmp_sunburst.name)
-
-            tem_graficos = True
         except Exception:
-            pass
-
-        if not tem_graficos:
             pdf.ln(10)
             pdf.set_font("Arial", "I", 10)
             pdf.cell(277, 10, formatar_texto("(Aviso: Não foi possível exportar os gráficos. Verifique se o pacote 'kaleido' está instalado.)"), ln=True, align='C')
 
-        buffer = BytesIO()
-        pdf.output(buffer)
-        return buffer.getvalue()
+        out = pdf.output(dest='S')
+        if isinstance(out, str):
+            return out.encode('latin-1')
+        return out
 
     except Exception:
         return None
@@ -337,7 +324,7 @@ elif pagina == "Dashboard Geral":
                 st.session_state["_reset_seed"] = random.random()
                 for key_base in ['faixas_sel', 'generos_sel', 'habitos_sel', 'hist_sel', 'freq_sel']:
                     for k in list(st.session_state.keys()):
-                        if k.startswith(key_base) or k.startswith(f'check_all_{key_base}'):
+                        if k.startswith(key_base):
                             del st.session_state[k]
                 st.rerun()
 
